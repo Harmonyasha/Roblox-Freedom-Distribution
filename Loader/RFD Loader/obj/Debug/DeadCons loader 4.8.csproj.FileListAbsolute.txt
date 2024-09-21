@@ -1,0 +1,11 @@
+C:\Users\Owl\source\repos\DeadCons loader 4.8\DeadCons loader 4.8\bin\Debug\DeadCons loader.exe.config
+C:\Users\Owl\source\repos\DeadCons loader 4.8\DeadCons loader 4.8\bin\Debug\DeadCons loader.exe
+C:\Users\Owl\source\repos\DeadCons loader 4.8\DeadCons loader 4.8\bin\Debug\DeadCons loader.pdb
+C:\Users\Owl\source\repos\DeadCons loader 4.8\DeadCons loader 4.8\obj\Debug\DeadCons loader 4.8.csproj.AssemblyReference.cache
+C:\Users\Owl\source\repos\DeadCons loader 4.8\DeadCons loader 4.8\obj\Debug\DeadCons loader 4.8.csproj.CoreCompileInputs.cache
+C:\Users\Owl\source\repos\DeadCons loader 4.8\DeadCons loader 4.8\obj\Debug\DeadCons loader.exe
+C:\Users\Owl\source\repos\DeadCons loader 4.8\DeadCons loader 4.8\obj\Debug\DeadCons loader.pdb
+C:\Users\Owl\source\repos\DeadCons loader 4.8\DeadCons loader 4.8\bin\Debug\x64\7z.dll
+C:\Users\Owl\source\repos\DeadCons loader 4.8\DeadCons loader 4.8\bin\Debug\x86\7z.dll
+C:\Users\Owl\source\repos\DeadCons loader 4.8\DeadCons loader 4.8\bin\Debug\SevenZipExtractor.dll
+C:\Users\Owl\source\repos\DeadCons loader 4.8\DeadCons loader 4.8\obj\Debug\DeadCons.24508E3C.Up2Date
