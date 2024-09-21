@@ -18,4 +18,4 @@ For additional information on installing and configuring Wine, refer to the [off
 
 ## 🚀 Original Author
 
-The project was created by [Windows81](https://github.com/Windows81/Roblox-Freedom-Distribution) and is maintained by the developer community.
+The project was created by [Windows81](https://github.com/Windows81/Roblox-Freedom-Distribution)
