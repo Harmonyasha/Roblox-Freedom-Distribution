@@ -9,7 +9,6 @@ NUM_THREADS = 4
 
 class obj_type(logic.entry):
     local_args: 'arg_type'
-    base_url_bytes: bytes
 
     def check_host(self, full_path: str) -> bool:
         l = len(self.base_url_bytes)
@@ -60,4 +59,5 @@ class obj_type(logic.entry):
 @dataclasses.dataclass
 class arg_type(logic.arg_type):
     obj_type = obj_type
+
     base_url: str

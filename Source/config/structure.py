@@ -1,136 +1,78 @@
-from .types.callable import obj_type as callable
-from .types import structs, wrappers
+from typing_extensions import Callable
+
 from . import allocateable
+from . import custom_types
 import util.versions
 import util.resource
-import textwrap
+import dataclasses
+import storage
+import enum
+
+
+@dataclasses.dataclass
+class avatar_colors:
+    head: int
+    left_arm: int
+    left_leg: int
+    right_arm: int
+    right_leg: int
+    torso: int
+
+
+@dataclasses.dataclass
+class avatar_scales:
+    height: float
+    width: float
+    head: float
+    depth: float
+    proportion: float
+    body_type: float
+
+
+class chat_style(enum.Enum):
+    CLASSIC_CHAT = "Classic"
+    BUBBLE_CHAT = "Bubble"
+    CLASSIC_AND_BUBBLE_CHAT = "ClassicAndBubble"
+
+
+class avatar_type(enum.Enum):
+    R6 = "R6"
+    R15 = "R15"
 
 
 class config_type(allocateable.obj_type):
     '''
     Configuration specification, according by default to "GameConfig.toml".
     '''
-    class metadata(allocateable.obj_type):
-        config_version_wildcard: wrappers.rfd_version_check = "*"  # type:ignore
-
     class server_assignment(allocateable.obj_type):
         class players(allocateable.obj_type):
-            maximum: int = 1024
-            preferred: int = 1024
+            maximum: int
+            preferred: int
 
         class instances(allocateable.obj_type):
-            count: int = 1
+            count: int
 
     class game_setup(allocateable.obj_type):
-        class place_file(allocateable.obj_type):
-            rbxl_uri: wrappers.uri_obj
-            enable_saveplace: bool = False
+        place_path: custom_types.file_path
+        database_path: custom_types.file_path
+        roblox_version: util.versions.roblox
+        icon_path: custom_types.file_path
+        erase_database_on_start: bool
 
-        class asset_cache(allocateable.obj_type):
-            dir_path: wrappers.path_str = './AssetCache'  # type:ignore
-            clear_on_start: bool = False
-
-        class persistence(allocateable.obj_type):
-            sqlite_path: wrappers.path_str = '_.sqlite'  # type:ignore
-            clear_on_start: bool = False
-
-        roblox_version: util.versions.rōblox
-        startup_script: str = ''
-
-        title: str = 'Untitled'
-        description: str = ''
-        creator_name: str = 'RFD'
-        icon_uri: wrappers.uri_obj = ''  # type:ignore
+        class creator(allocateable.obj_type):
+            name: str
+        name: str
+        description: str
 
     class server_core(allocateable.obj_type):
-        chat_style: structs.chat_style = structs.chat_style.CLASSIC_CHAT
-
-        retrieve_default_user_code: callable[[float], str] = textwrap.dedent('''\
-        def f(tick):
-            return 'Player%d' % tick
-        ''')  # type: ignore
-
-        check_user_allowed: callable[[int, str], bool] = textwrap.dedent('''\
-        def f(*a):
-            return True
-        ''')  # type: ignore
-
-        check_user_has_admin: callable[[int, str], bool] = textwrap.dedent('''\
-        def f(*a):
-            return False
-        ''')  # type: ignore
-
-        retrieve_username: callable[[int, str], str] = textwrap.dedent('''\
-        def f(i, n, *a):
-            return n
-        ''')  # type: ignore
-
-        retrieve_user_id: callable[[str], int] = textwrap.dedent('''\
-        count = 0
-        def f(*a):
-            nonlocal count
-            count += 1
-            return count
-        ''')  # type: ignore
-
-        retrieve_avatar_type: callable[[int, str], structs.avatar_type] = textwrap.dedent('''\
-        def f():
-            return 'R6'
-        ''')  # type: ignore
-
-        retrieve_avatar_items: callable[[int, str], list[int]] = textwrap.dedent('''\
-        def f():
-            return []
-        ''')  # type: ignore
-
-        retrieve_avatar_scales: callable[[int, str], structs.avatar_scales] = textwrap.dedent('''\
-        def f():
-            return {
-                "height": 1,
-                "width": 1,
-                "head": 1,
-                "depth": 1,
-                "proportion": 0,
-                "body_type": 0,
-            }
-        ''')  # type: ignore
-
-        retrieve_avatar_colors: callable[[int, str], structs.avatar_colors] = textwrap.dedent('''\
-        def f():
-            return {
-                "head": 1,
-                "left_arm": 1,
-                "left_leg": 1,
-                "right_arm": 1,
-                "right_leg": 1,
-                "torso": 1,
-            }
-        ''')  # type: ignore
-
-        retrieve_groups: callable[[int, str], dict[str, int]] = textwrap.dedent('''\
-        def f(*a):
-            return []
-        ''')  # type: ignore
-
-        retrieve_account_age: callable[[int, str], int] = textwrap.dedent('''\
-        def f(*a):
-            return 0
-        ''')  # type: ignore
-
-        retrieve_default_funds: callable[[int, str], int] = textwrap.dedent('''\
-        def f(*a):
-            return 0
-        ''')  # type: ignore
-
-        filter_text: callable[[str, int, str], str] = textwrap.dedent('''\
-        def f(t, *a):
-            return t
-        ''')  # type: ignore
-
-    class remote_data(allocateable.obj_type):
-        gamepasses: structs.gamepasses = []  # type: ignore
-        asset_redirects: callable[[int | str], structs.asset_redirect | None] = textwrap.dedent('''\
-        def f(*a):
-            return None
-        ''')  # type: ignore
-        badges: structs.badges = []  # type: ignore
+        chat_style: chat_style
+        retrieve_default_user_code: Callable[[float], str]
+        check_user_allowed: Callable[[str, str], bool]
+        retrieve_username: Callable[[str], str]
+        retrieve_user_id: Callable[[str], int]
+        retrieve_avatar_type: Callable[[str], avatar_type]
+        retrieve_avatar_items: Callable[[str], list[str]]
+        retrieve_avatar_scales: Callable[[str], avatar_scales]
+        retrieve_avatar_colors: Callable[[str], avatar_colors]
+        retrieve_account_age: Callable[[str], int]
+        filter_text: Callable[[str, str], str]

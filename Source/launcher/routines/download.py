@@ -9,21 +9,22 @@ import launcher.downloader as downloader
 
 @dataclasses.dataclass
 class _arg_type(logic.arg_type):
-    rōblox_version: util.versions.rōblox
+    roblox_version: util.versions.roblox
     bin_subtype: str
 
 
 class obj_type(logic.bin_entry):
     local_args: _arg_type
 
-    def __init__(self, rōblox_version: util.versions.rōblox, bin_subtype: str):
+    def __init__(self, roblox_version: util.versions.roblox, bin_subtype: str):
+        print("Download.py")
         super().__init__()
-        self.rōblox_version = rōblox_version
+        self.roblox_version = roblox_version
         self.bin_subtype = bin_subtype
 
     def process(self) -> None:
-        downloader.bootstrap_binary(
-            self.rōblox_version,
+        downloader.download_binary(
+            self.roblox_version,
             self.BIN_SUBTYPE,
         )
 

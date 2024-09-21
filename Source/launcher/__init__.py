@@ -1,25 +1,12 @@
-from .subparsers.args_launch_mode import (
-    download,
-    player,
-    server,
-)
-
-from .subparsers.args_aux import (
-    clear_appdata,
-    download,
-    debug,
-)
+from .subparsers.args_launch_mode import download, player, server, studio
+from .subparsers.args_aux import clear_appdata, download, debug
 
 import launcher.routines._logic as routine_logic
 import launcher.subparsers._logic as sub_logic
-
-import traceback
 import argparse
-import shlex
-import sys
 
 
-def parse_arg_list(args: list[str] | None) -> list:
+def parse_args(args: list[str] | None) -> routine_logic.routine:
     '''
     Generates a list of routines from `launcher/subparser` scripts, filtering by the `mode` command-line parameter.
     '''
@@ -58,18 +45,17 @@ def parse_arg_list(args: list[str] | None) -> list:
         chosen_sub_parser,
     )
 
-    # Adds '--help' argument manually after the high-level parser called 'parse_known_args'.
+    # Adds '--help' argument manually after the super parser called 'parse_known_args'.
     # Otherwise, the program would stop earlier and the help-text would be incomplete.
-    # The `-h` flag is replaced with `-?` here because we're using `-h` to signify `--rcc_host`.
     chosen_sub_parser.add_argument(
-        '--help', '-?',
+        '--help', '-h',
         help='show this help message and exit',
         action='help',
     )
 
     # Completes populating the argument namespace, with errors being thrown if an argument is invalid.
     try:
-        args_namespace = parser.parse_args(args)
+        args_namespace = parser.parse_args()
     except argparse.ArgumentError as x:
         print(x)
         chosen_sub_parser.print_help()
@@ -89,33 +75,15 @@ def parse_arg_list(args: list[str] | None) -> list:
         routine_args_list,
     )
 
-    return routine_args_list
-
-
-def perform_routine(routine_args_list: list) -> routine_logic.routine:
-    return routine_logic.routine(*routine_args_list)
+    routine = routine_logic.routine(*routine_args_list)
+    return routine
 
 
 def process(args: list[str] | None = None) -> None:
-    '''
-    Highest-level main function which takes a list of arguments
-    and does everything in one go.
-    '''
-    if args is None:
-        args = sys.argv[1:]
-
-    if len(args) == 0:
-        args = shlex.split(input("Enter your command-line arguments: "))
-
-    routine = None
+    routine = parse_args(args)
     try:
-        arg_list = parse_arg_list(args)
-        routine = perform_routine(arg_list)
         routine.wait()
     except KeyboardInterrupt:
         pass
-    # except Exception as e:
-        # traceback.print_exc()
-        # print(e)
     finally:
         del routine
