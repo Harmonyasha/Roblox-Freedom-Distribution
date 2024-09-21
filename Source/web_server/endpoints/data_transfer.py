@@ -4,9 +4,11 @@ import json
 
 @server_path("/rfd/data-transfer")
 def _(self: web_server_handler) -> bool:
+    
     transferer = self.server.data_transferer
-    assert transferer is not None
-
+    if not transferer:
+        return False
+    print("data")
     input_data = json.loads(self.read_content())
     if isinstance(input_data, dict):
         transferer.insert(input_data)

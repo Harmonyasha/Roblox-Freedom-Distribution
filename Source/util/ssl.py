@@ -83,16 +83,16 @@ def get_path(*paths: str) -> str:
 class ssl_mutable:
     CONTEXT_COUNTS = {}
 
-    def prepare_file_path(self, name_prefix: str, ext: str) -> str:
-        count_key = f'{name_prefix}.{ext}'
-        context_count = ssl_mutable.CONTEXT_COUNTS.setdefault(count_key, 0)
+    def prepare_file_path(self, prefix: str, ext: str) -> str:
+        count_key = f'{prefix}.{ext}'
+        count = ssl_mutable.CONTEXT_COUNTS.setdefault(count_key, 0)
         ssl_mutable.CONTEXT_COUNTS[count_key] += 1
-        name_sufix = f'{context_count:03d}'
+        suffix = f'{count:03d}'
 
-        ssl_file_path = get_path(f'{name_prefix}{name_sufix}.{ext}')
-        if os.path.isfile(ssl_file_path):
-            os.remove(ssl_file_path)
-        return ssl_file_path
+        path = get_path(f'{prefix}{suffix}.{ext}')
+        if os.path.exists(path):
+            os.remove(path)
+        return path
 
     def __init__(self) -> None:
         self.ca = trustme.CA()
@@ -105,20 +105,17 @@ class ssl_mutable:
     def issue_cert(self, *identities: str) -> trustme.LeafCert:
         cert: trustme.LeafCert = self.ca.issue_cert(*identities)
 
-        # Writes the certificate(s) that the server should use.
+        # Writes the certificate that the server should use.
         self.server_pem_path = self.prepare_file_path('server', 'pem')
         for i, blob in enumerate(cert.cert_chain_pems):
-            blob.write_to_path(
-                path=self.server_pem_path,
-                append=(i > 0),
-            )
+            # blob.write_to_path(path=self.server_pem_path, append=True)
+            blob.write_to_path(path=self.server_pem_path, append=(i > 0))
 
         # Writes the private key that the server should use.
         self.server_key_path = self.prepare_file_path('server', 'key')
         cert.private_key_pem.write_to_path(
-            path=self.server_key_path,
-            append=False,
-        )
+            # path=self.server_key_path, append=True)
+            path=self.server_key_path, append=False)
 
         return cert
 

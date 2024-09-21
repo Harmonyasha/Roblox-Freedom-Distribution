@@ -1,26 +1,26 @@
-from typing_extensions import Callable
+import launcher.routines._logic as logic
 import util.versions as versions
+import dataclasses
 import util.const as const
 from urllib import parse
+import config.structure
 import OpenSSL.crypto
+import config
 import http.server
-import dataclasses
-import traceback
 import mimetypes
 import functools
 import util.ssl
 import base64
-import config
 import socket
 import enum
 import json
 import ssl
 import re
 import os
-
-
-@dataclasses.dataclass(unsafe_hash=True)
+@dataclasses.dataclass
 class port_typ:
+    def __hash__(self) -> int:
+        return self.port_num
     port_num: int
     is_ssl: bool = True
     is_ipv6: bool = False
@@ -31,42 +31,16 @@ class func_mode(enum.Enum):
     REGEX = 1
 
 
-@dataclasses.dataclass(frozen=True)
-class server_func_key:
-    mode: func_mode
-    version: versions.rōblox
-    path: str
-    command: str
+SERVER_FUNCS = {m: dict[str, versions.version_holder]() for m in func_mode}
 
 
-SERVER_FUNCS = dict[server_func_key, Callable]()
-
-
-def server_path(
-    path: str,
-    regex: bool = False,
-    versions: set[versions.rōblox] = set(versions.rōblox),
-    commands: set[str] = {'POST', 'GET'}
-):
-    def inner(func):
-        dict_mode = (
-            func_mode.REGEX
-            if regex
-            else func_mode.STATIC
-        )
-
-        SERVER_FUNCS.update({
-            server_func_key(
-                mode=dict_mode,
-                version=version,
-                path=path,
-                command=command,
-            ): func
-            for version in versions
-            for command in commands
-        })
-
-        return func
+def server_path(path: str, regex: bool = False, min_version: int = 0):
+    def inner(f):
+        print(path,"Patched")
+        dict_mode = func_mode.REGEX if regex else func_mode.STATIC
+        SERVER_FUNCS[dict_mode].setdefault(
+            path, versions.version_holder()).add_min(f, min_version)
+        return f
     return inner
 
 
@@ -83,8 +57,9 @@ def rbx_sign(data: bytes, key: bytes, prefix: bytes = b'--rbxsig') -> bytes:
     )
     return prefix + b"%" + base64.b64encode(signature) + b'%' + data
 
-
 class web_server(http.server.ThreadingHTTPServer):
+    
+    allow_reuse_address = True
     def __init__(
         self,
         port: port_typ,
@@ -94,29 +69,35 @@ class web_server(http.server.ThreadingHTTPServer):
     ) -> None:
         self.game_config = game_config
         self.data_transferer = game_config.data_transferer
-        self.storage = game_config.storage
+        self.database = game_config.database
 
         self.is_ipv6 = port.is_ipv6
         self.address_family = socket.AF_INET6 if self.is_ipv6 else socket.AF_INET
         self.print_http_log = print_http_log
-
+ 
+        print(port.port_num)
+   
         super().__init__(
             ('', port.port_num),
             web_server_handler,
             *args, **kwargs,
         )
-
-
+   
+isalreadyrunned = False
 class web_server_ssl(web_server):
     ssl_mutable: util.ssl.ssl_mutable
     identities: set[str]
-
+    
     def __init__(
         self,
         port: port_typ,
         *args, **kwargs,
     ) -> None:
-
+        global isalreadyrunned
+        if not isalreadyrunned:
+           isalreadyrunned = True
+           return
+        
         super().__init__(
             port,
             *args, **kwargs,
@@ -158,7 +139,7 @@ class web_server_handler(http.server.BaseHTTPRequestHandler):
             return False
 
         host: str | None = self.headers.get('Host')
-        if host is None:
+        if not host:
             return False
 
         self.is_valid_request = True
@@ -182,19 +163,14 @@ class web_server_handler(http.server.BaseHTTPRequestHandler):
             f'{self.domain}:{self.sockname[1]}'
 
         self.url = f'{self.hostname}{self.path}'
-        self.url_split = parse.urlsplit(self.url)
-
-        # Optimised for query values which may contain more than one of the same field.
-        self.query_lists = parse.parse_qs(self.url_split.query)
-
-        # Optimised for quick access for query indicies which only show up once.
+        self.urlsplit = parse.urlsplit(self.url)
         self.query = {
             i: v[0]
-            for i, v in self.query_lists.items()
+            for i, v in parse.parse_qs(self.urlsplit.query).items()
         }
         return True
 
-    def handle_rcc_request(self) -> None:
+    def do_GET(self) -> None:
         if self.__open_from_static():
             return
         if self.__open_from_regex():
@@ -203,14 +179,20 @@ class web_server_handler(http.server.BaseHTTPRequestHandler):
             return
         try:
             self.send_error(404)
-        except ssl.SSLError:
+        except ssl.SSLEOFError:
             pass
 
-    def do_GET(self) -> None: return self.handle_rcc_request()
-    def do_POST(self) -> None: return self.handle_rcc_request()
-    def do_HEAD(self) -> None: return self.handle_rcc_request()
-    def do_PATCH(self) -> None: return self.handle_rcc_request()
-    def do_DELETE(self) -> None: return self.handle_rcc_request()
+    def do_POST(self) -> None:
+        if self.__open_from_static():
+            return
+        if self.__open_from_regex():
+            return
+        if self.__open_from_file():
+            return
+        try:
+            self.send_error(404)
+        except ssl.SSLEOFError:
+            pass
 
     def send_json(
         self,
@@ -242,48 +224,27 @@ class web_server_handler(http.server.BaseHTTPRequestHandler):
         if content_type:
             self.send_header('content-type', content_type)
         self.send_header('content-length', str(len(data)))
-        try:
-            self.end_headers()
-            self.wfile.write(data)
-        except ssl.SSLEOFError:
-            # A `ssl.SSLEOFError` is likely thrown whenever a request is interrupted.
-            pass
-
-    def send_redirect(self, url: str) -> None:
-        self.send_response(301)
-        self.send_header("Location", url)
         self.end_headers()
+        self.wfile.write(data)
+
+    def __process_func(self, func, *args, **kwargs) -> bool:
+        if not func:
+            return False
+        version_func = func.get(self.game_config.game_setup.roblox_version)
+        if not version_func:
+            return False
+        return version_func(self, *args, **kwargs)
 
     def __open_from_static(self) -> bool:
-        key = server_func_key(
-            mode=func_mode.STATIC,
-            version=self.game_config.game_setup.roblox_version,
-            path=self.url_split.path,
-            command=self.command,
-        )
-
-        func = SERVER_FUNCS.get(key)
-        if func is None:
-            return False
-        try:
-            return func(self)
-        except ssl.SSLEOFError:
-            return False
-        except Exception as e:
-            print(traceback.format_exc())
-            return False
+        func = SERVER_FUNCS[func_mode.STATIC].get(self.urlsplit.path, None)
+        return self.__process_func(func)
 
     def __open_from_regex(self) -> bool:
-        for key, func in SERVER_FUNCS.items():
-            if key.mode != func_mode.REGEX:
+        for pattern, func in SERVER_FUNCS[func_mode.REGEX].items():
+            match = re.search(pattern, self.urlsplit.path)
+            if not match:
                 continue
-            match = re.fullmatch(key.path, self.url_split.path)
-            if match is None:
-                continue
-            try:
-                return func(self, match)
-            except Exception:
-                continue
+            return self.__process_func(func, match)
         return False
 
     def __open_from_file(self) -> bool:
@@ -291,14 +252,14 @@ class web_server_handler(http.server.BaseHTTPRequestHandler):
         # TODO: remove completely or find a new use for this piece of code.
         fn = os.path.realpath(os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            '../www', self.url_split.path,
+            '../www', self.urlsplit.path,
         ))
 
         if "." not in fn.split(os.path.sep)[-1]:
             fn = os.path.join(fn, 'index.php')
         mime_type = mimetypes.guess_type(fn)[0]
 
-        if os.path.isfile(fn):
+        if os.path.exists(fn):
             self.send_header('content-type', mime_type)
             self.send_data(open(fn, "rb").read())
             return True

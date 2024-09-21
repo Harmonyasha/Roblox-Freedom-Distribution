@@ -13,14 +13,16 @@ TOP_DIR = \
 
 
 class dir_type(enum.Enum):
-    RŌBLOX = 0
-    SSL = 1
-    MISC = 2
+    RoBLOX = 0
+    ASSET = 1
+    SSL = 2
+    MISC = 3
 
 
 class bin_subtype(enum.Enum):
     SERVER = 'Server'
     PLAYER = 'Player'
+    STUDIO = 'Studio'
 
 
 DEFAULT_CONFIG_PATH = './GameConfig.toml'
@@ -29,10 +31,15 @@ DEFAULT_CONFIG_PATH = './GameConfig.toml'
 def get_paths(d: dir_type) -> list[str]:
     match (MADE_WITH_PYINSTALLER, d):
 
-        case (True, dir_type.RŌBLOX):
+        case (True, dir_type.RoBLOX):
             return [TOP_DIR, 'Roblox']
-        case (False, dir_type.RŌBLOX):
+        case (False, dir_type.RoBLOX):
             return [TOP_DIR, 'Roblox']
+
+        case (True, dir_type.ASSET):
+            return [TOP_DIR, 'AssetCache']
+        case (False, dir_type.ASSET):
+            return [TOP_DIR, 'AssetCache']
 
         # If running from `exe`, stores TLS certiifcates in a temporary directory.
         case (True, dir_type.SSL):
@@ -57,7 +64,7 @@ def make_dirs(full_path: str) -> None:
         pieces.append(head)
 
     for head in reversed(pieces):
-        if not os.path.isdir(head):
+        if not os.path.exists(head):
             os.mkdir(head)
 
 
@@ -67,8 +74,8 @@ def retr_full_path(d: dir_type, *paths: str) -> str:
     return full_path
 
 
-def retr_rōblox_full_path(version: util.versions.rōblox, bin_type: bin_subtype, *paths: str) -> str:
-    return retr_full_path(dir_type.RŌBLOX, version.name, bin_type.value, *paths)
+def retr_roblox_full_path(version: util.versions.roblox, bin_type: bin_subtype, *paths: str) -> str:
+    return retr_full_path(dir_type.RoBLOX, version.name, bin_type.value, *paths)
 
 
 def retr_config_full_path(path: str = DEFAULT_CONFIG_PATH) -> str:

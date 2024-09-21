@@ -1,20 +1,14 @@
 from web_server._logic import server_path, web_server_handler
 
 from . import (
-    assets,
-    avatar,
     data_transfer,
-    persistence,
+    load_assets,
     setup_player,
     setup_rcc,
     text_filter,
     player_info,
-    save_place,
-    funds,
-    groups,
-    joinscript,
-    gamepasses,
-    badges,
+    load_avatar,
+    load_persistence,
 )
 
 

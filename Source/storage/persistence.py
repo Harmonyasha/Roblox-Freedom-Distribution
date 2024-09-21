@@ -12,10 +12,10 @@ class database(_logic.sqlite_connector_base):
         KEY = '"key"'
         VALUE = '"value"'
 
-    def first_time_setup(self) -> None:
+    def first_time_setup(self):
         self.sqlite.execute(
             f"""
-            CREATE TABLE IF NOT EXISTS "{self.TABLE_NAME}" (
+            CREATE TABLE "{self.TABLE_NAME}" (
                 {self.field.SCOPE.value} TEXT NOT NULL,
                 {self.field.TARGET.value} TEXT NOT NULL,
                 {self.field.KEY.value} TEXT NOT NULL,
@@ -31,7 +31,7 @@ class database(_logic.sqlite_connector_base):
         self.sqlite.commit()
 
     def set(self, scope: str, target: str, key: str, value) -> None:
-        value_str = json.dumps(value)
+        value_str = json.loads(value)
         self.sqlite.execute(
             f"""
             INSERT INTO "{self.TABLE_NAME}"
@@ -41,14 +41,14 @@ class database(_logic.sqlite_connector_base):
                 {self.field.KEY.value},
                 {self.field.VALUE.value}
             )
-            VALUES (?, ?, ?, ?)
-            """,
+            VALUES
             (
-                scope,
-                target,
-                key,
-                value_str,
-            ),
+                {repr(scope)},
+                {repr(target)},
+                {repr(key)},
+                {repr(value_str)}
+            )
+            """,
         )
         self.sqlite.commit()
 
@@ -64,8 +64,8 @@ class database(_logic.sqlite_connector_base):
             AND {self.field.KEY.value} = {repr(key)}
             """,
         ).fetchone()
-        if result is None:
+        if not result:
             return None
 
         value = result[0]
-        return json.loads(value)
+        return json.dumps(value)

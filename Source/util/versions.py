@@ -1,13 +1,11 @@
 import typing_extensions
-import functools
 import enum
 
 
-@functools.total_ordering
-class rōblox(enum.Enum):
-    # v271 = ('2016L', '2016',)
-    v348 = ('2018M', '2018',)
-    v463 = ('2021E', '2021',)
+class roblox(enum.Enum):
+    # v271 = '2016L'
+    v348 = '2018M'
+    v463 = '2021E'
 
     # TODO: get 2022L Studio to work with this program.
     # v547 = '2022L'
@@ -26,21 +24,32 @@ class rōblox(enum.Enum):
     def from_name(value: str | int):
         return VERSION_MAP[str(value)]
 
-    def __lt__(self, other: typing_extensions.Self):
-        return self.get_number() < other.get_number()
-
-
-FIRST_VERSION = min(rōblox)
-LAST_VERSION = max(rōblox)
-
 
 VERSION_MAP = dict(
     (k, e)
-    for e in rōblox
+    for e in roblox
     for k in
     [
         e.name,
-        *e.value,
+        e.value,
         e.name[1:],
     ]
 )
+
+
+T = typing_extensions.TypeVar('T')
+
+
+class version_holder(dict[roblox, T]):
+    def __add_pred(self, func: typing_extensions.Callable[[int], bool], obj: T) -> T:
+        for v in roblox:
+            if not func(v.get_number()):
+                continue
+            super().__setitem__(v, obj)
+        return obj
+
+    def add_min(self, obj: T, min_version: int) -> T:
+        return self.__add_pred(lambda n: n >= min_version, obj)
+
+    def add_all(self, obj: T) -> T:
+        return self.__add_pred(lambda n: True, obj)

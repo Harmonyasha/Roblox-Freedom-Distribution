@@ -7,51 +7,51 @@ class database(_logic.sqlite_connector_base):
 
     class player_field(enum.Enum):
         USER_CODE = '"user_code"'
-        ID_NUMBER = '"id_number"'
         USERNAME = '"username"'
+        ID_NUMBER = '"id_number"'
 
     def first_time_setup(self) -> None:
         self.sqlite.execute(
             f"""
-            CREATE TABLE IF NOT EXISTS "{self.TABLE_NAME}" (
+            CREATE TABLE "{self.TABLE_NAME}" (
                 {self.player_field.USER_CODE.value} TEXT NOT NULL,
-                {self.player_field.ID_NUMBER.value} INTEGER NOT NULL,
                 {self.player_field.USERNAME.value} TEXT NOT NULL,
+                {self.player_field.ID_NUMBER.value} INTEGER NOT NULL,
                 PRIMARY KEY(
                     {self.player_field.USER_CODE.value}
                 ) ON CONFLICT IGNORE,
                 UNIQUE ({self.player_field.USER_CODE.value}) ON CONFLICT IGNORE,
-                UNIQUE ({self.player_field.ID_NUMBER.value}) ON CONFLICT IGNORE,
-                UNIQUE ({self.player_field.USERNAME.value}) ON CONFLICT IGNORE
+                UNIQUE ({self.player_field.USERNAME.value}) ON CONFLICT IGNORE,
+                UNIQUE ({self.player_field.ID_NUMBER.value}) ON CONFLICT IGNORE
             );
             """,
         )
         self.sqlite.commit()
 
-    def add_player(self, user_code: str, id_num: int, username: str) -> tuple[str, int, str]:
+    def add_player(self, user_code: str, username: str, id_num: int) -> tuple[str, str, int]:
         self.sqlite.execute(
             f"""
             INSERT INTO "{self.TABLE_NAME}"
             (
                 {self.player_field.USER_CODE.value},
-                {self.player_field.ID_NUMBER.value},
-                {self.player_field.USERNAME.value}
+                {self.player_field.USERNAME.value},
+                {self.player_field.ID_NUMBER.value}
             )
-            VALUES (?, ?, ?)
-            """,
+            VALUES
             (
-                user_code,
-                id_num,
-                username,
-            ),
+                {repr(user_code)},
+                {repr(username)},
+                {repr(id_num)}
+            )
+            """,
         )
         self.sqlite.commit()
         result = self.sqlite.execute(
             f"""
             SELECT
             {self.player_field.USER_CODE.value},
-            {self.player_field.ID_NUMBER.value},
-            {self.player_field.USERNAME.value}
+            {self.player_field.USERNAME.value},
+            {self.player_field.ID_NUMBER.value}
 
             FROM "{self.TABLE_NAME}"
             WHERE {self.player_field.USER_CODE.value} = {repr(user_code)}
@@ -63,7 +63,7 @@ class database(_logic.sqlite_connector_base):
         if index == self.player_field.ID_NUMBER:
             value = self.sanitise_player_id_num(value)
 
-        if value is None:
+        if not value:
             return None
 
         result = self.sqlite.execute(
@@ -71,28 +71,11 @@ class database(_logic.sqlite_connector_base):
             SELECT {field.value} FROM "{self.TABLE_NAME}" WHERE {index.value} = {repr(value)}
             """,
         ).fetchone()
-        if result is None:
+        if not result:
             return None
         return result[0]
 
-    def check(self, index: player_field, value) -> bool:
-        '''
-        Checks if a player with a particular field value exists.
-        '''
-        if index == self.player_field.ID_NUMBER:
-            value = self.sanitise_player_id_num(value)
-
-        if value is None:
-            return False
-
-        result = self.sqlite.execute(
-            f"""
-            SELECT * FROM "{self.TABLE_NAME}" WHERE {index.value} = {repr(value)}
-            """,
-        ).fetchone()
-        return result is not None
-
     def sanitise_player_id_num(self, id_num: str | int | None) -> int | None:
-        if id_num is None:
+        if not id_num:
             return None
         return int(id_num)
